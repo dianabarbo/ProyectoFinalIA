@@ -14,13 +14,17 @@ library(cluster)
 library(factoextra)
 
 #LIMPIEZA DE DATOS
-Data <- read.table("DataSet.csv",sep=",",header = TRUE)
+Data <- read.table("DataSet1.csv",
+                   sep=",",
+                   header = TRUE,
+                   encoding = "UTF-8")
 
 #Cómo vamos a manejar las tildes?
 
 #ANÁLISIS EXPLORATORIO
 summary(Data)
 head(Data)
+class(Data)
 
 #DETERMINANDO EL NÚMERO DE CLÚSTER
 #MÉTODO DEL CODO
@@ -44,4 +48,92 @@ ggplot(elbow_df, aes(x = k, y = tot_withinss)) +
 
 
 #ANÁLISIS DE SALIDAS
+
+
+DataCero <- read.delim("ecosystems.txt")
+Data <- scale(DataCero)
+
+#------ Finding the optimal k for the cluster analysis
+
+#---Elbow plot
+
+tot_withinss <- map_dbl(1:9, function(k){
+  model <- kmeans(x = Data, centers = k)
+  model$tot.withinss
+})
+
+elbow_df <- data.frame(
+  k = 1:9,
+  tot_withinss = tot_withinss
+)
+
+ggplot(elbow_df, aes(x = k, y = tot_withinss)) +
+  geom_line() + geom_point() +
+  scale_x_continuous(breaks = 1:10) +
+  ggtitle("Elbow plot")
+
+# Based on elbow plot the optimal k would be 2 or 3.
+# The optimal K would be choosen between 2 or 3 based on silhoutte analysis.
+
+#--- Silhouette Analysis
+
+sil_width <- map_dbl(2:10,  function(k){
+  model <- pam(Data, k = k)
+  model$silinfo$avg.width
+})
+
+sil_df <- data.frame(
+  k = 2:10,
+  sil_width = sil_width
+)
+
+ggplot(sil_df, aes(x = k, y = sil_width)) +
+  geom_line() + geom_point() +
+  scale_x_continuous(breaks = 2:10) +
+  ggtitle("Silhouette Analysis")
+
+#--- OPTIMAL K = 2 based on comparision between two methods analized before.
+
+#------ Construir Matriz de interdistancias Poner de manifiesto: estructura de grupos
+
+dist_variables <- dist(Data, method = "euclidean")
+dist_variables
+
+#------ Caracterización de los "posibles grupos"
+
+model1 <- kmeans(x = Data, centers = 2)
+model1$centers
+
+cluster1 <- model1$cluster
+cluster1
+
+Original_DataClustered <- as.data.frame(DataCero) %>% 
+  mutate (cluster = cluster1)
+Original_DataClustered
+
+MeanCLusters <- Original_DataClustered %>% 
+  group_by(cluster) %>% 
+  summarise(mean_colif_total = mean(Colif_total),
+            mean_colif_fecal=mean(Colif_fecal),
+            mean_Estrep_fecal=mean(Estrep_fecal),
+            mean_Cont_mineral=mean(Cont_mineral),
+            mean_conduct = mean(Conductivitat),
+            mean_Solids_susp = mean(Solids_susp),
+            mean_DQO =mean(DQO_M))
+
+as.data.frame(MeanCLusters)
+
+#------ Determinar el patrón de cada grupo (individuo "representante" del mismo)
+
+patterns <- model1$centers
+patterns
+
+#------Representar los ecosistemas en un espacio de dimensión reducido (2D, 3D)
+
+clusplot(Original_DataClustered,
+         model1$cluster, 
+         main = "2D Plot", 
+         shade = T, 
+         labels = 2,
+         lines = 0)
 
