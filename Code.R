@@ -6,74 +6,86 @@
 install.packages("dplyr")
 install.packages("purrr")
 install.packages("factoextra")
+install.packages("DataExplorer") #
 
 library(dplyr)
 library(ggplot2)
 library(purrr)
 library(cluster)
 library(factoextra)
+library(DataExplorer)
 
 #LIMPIEZA DE DATOS
 Data <- read.table("DataSet1.csv",
                    sep=",",
                    header = TRUE,
-                   encoding = "UTF-8")
-
-#Cómo vamos a manejar las tildes?
+                   encoding = "UTF-8",)
+Data <- as.data.frame(Data)
+Data <- na.omit(Data)
+Data <- dummify(Data,maxcat=860) #select=c("","")
 
 #ANÁLISIS EXPLORATORIO
 summary(Data)
 head(Data)
-class(Data)
+
+#Data$Año.desmovilizacion <- as.factor(Data$Año.desmovilizacion)
+#Data$Año.de.Independizacion.Ingreso <- as.factor(Data$Año.de.Independizacion.Ingreso)
 
 #DETERMINANDO EL NÚMERO DE CLÚSTER
 #MÉTODO DEL CODO
 
-tot_withinss <- map_dbl(1:9, function(k){
+tot_withinss <- map_dbl(1:5, function(k){
   model <- kmeans(x = Data, centers = k)
   model$tot.withinss
 })
 
 elbow_df <- data.frame(
-  k = 1:9,
+  k = 1:5,
   tot_withinss = tot_withinss
 )
 
-ggplot(elbow_df, aes(x = k, y = tot_withinss)) +
+elbow_plot <- ggplot(elbow_df, aes(x = k, y = tot_withinss)) +
   geom_line() + geom_point() +
   scale_x_continuous(breaks = 1:10) +
   ggtitle("Elbow plot")
+
+(elbow_plot)
 
 #CLÚSTER
 
+dist_variables <- dist(Data, method = "euclidean")
+dist_variables
 
-#ANÁLISIS DE SALIDAS
+#------ Caracterización de los "posibles grupos"
+
+model1 <- kmeans(x = Data, centers = 4)
+model1$centers
+
+cluster1 <- model1$cluster
+cluster1
+
+Original_DataClustered <- Data %>% 
+  mutate (cluster = cluster1)
+Original_DataClustered
+
+#------ Determinar el patrón de cada grupo (individuo "representante" del mismo)
+
+patterns <- model1$centers
+patterns
+
+#------Representar los ecosistemas en un espacio de dimensión reducido (2D, 3D)
+
+clusplot(Original_DataClustered,
+         model1$cluster, 
+         main = "2D Plot", 
+         shade = T, 
+         labels = 2,
+         lines = 0)
 
 
-DataCero <- read.delim("ecosystems.txt")
-Data <- scale(DataCero)
+# ---------------------------------------------------------------------------
 
-#------ Finding the optimal k for the cluster analysis
-
-#---Elbow plot
-
-tot_withinss <- map_dbl(1:9, function(k){
-  model <- kmeans(x = Data, centers = k)
-  model$tot.withinss
-})
-
-elbow_df <- data.frame(
-  k = 1:9,
-  tot_withinss = tot_withinss
-)
-
-ggplot(elbow_df, aes(x = k, y = tot_withinss)) +
-  geom_line() + geom_point() +
-  scale_x_continuous(breaks = 1:10) +
-  ggtitle("Elbow plot")
-
-# Based on elbow plot the optimal k would be 2 or 3.
-# The optimal K would be choosen between 2 or 3 based on silhoutte analysis.
+#EXTRAS
 
 #--- Silhouette Analysis
 
@@ -94,23 +106,6 @@ ggplot(sil_df, aes(x = k, y = sil_width)) +
 
 #--- OPTIMAL K = 2 based on comparision between two methods analized before.
 
-#------ Construir Matriz de interdistancias Poner de manifiesto: estructura de grupos
-
-dist_variables <- dist(Data, method = "euclidean")
-dist_variables
-
-#------ Caracterización de los "posibles grupos"
-
-model1 <- kmeans(x = Data, centers = 2)
-model1$centers
-
-cluster1 <- model1$cluster
-cluster1
-
-Original_DataClustered <- as.data.frame(DataCero) %>% 
-  mutate (cluster = cluster1)
-Original_DataClustered
-
 MeanCLusters <- Original_DataClustered %>% 
   group_by(cluster) %>% 
   summarise(mean_colif_total = mean(Colif_total),
@@ -122,18 +117,3 @@ MeanCLusters <- Original_DataClustered %>%
             mean_DQO =mean(DQO_M))
 
 as.data.frame(MeanCLusters)
-
-#------ Determinar el patrón de cada grupo (individuo "representante" del mismo)
-
-patterns <- model1$centers
-patterns
-
-#------Representar los ecosistemas en un espacio de dimensión reducido (2D, 3D)
-
-clusplot(Original_DataClustered,
-         model1$cluster, 
-         main = "2D Plot", 
-         shade = T, 
-         labels = 2,
-         lines = 0)
-
