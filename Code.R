@@ -20,7 +20,9 @@ Data <- read.table("DataSet1.csv",
                    sep=",",
                    header = TRUE,
                    encoding = "UTF-8",)
+Data <- select(Data, -Municipio.de.residencia)
 Data <- as.data.frame(Data)
+Data <- Data %>% slice(1:10000)
 Data <- na.omit(Data)
 Data <- dummify(Data,maxcat=860) #select=c("","")
 
@@ -34,13 +36,13 @@ head(Data)
 #DETERMINANDO EL NÚMERO DE CLÚSTER
 #MÉTODO DEL CODO
 
-tot_withinss <- map_dbl(1:5, function(k){
+tot_withinss <- map_dbl(1:7, function(k){
   model <- kmeans(x = Data, centers = k)
   model$tot.withinss
 })
 
 elbow_df <- data.frame(
-  k = 1:5,
+  k = 1:7,
   tot_withinss = tot_withinss
 )
 
@@ -53,8 +55,7 @@ elbow_plot <- ggplot(elbow_df, aes(x = k, y = tot_withinss)) +
 
 #CLÚSTER
 
-dist_variables <- dist(Data, method = "euclidean")
-dist_variables
+dist_variables <- dist(Data)
 
 #------ Caracterización de los "posibles grupos"
 
@@ -73,15 +74,21 @@ Original_DataClustered
 patterns <- model1$centers
 patterns
 
-#------Representar los ecosistemas en un espacio de dimensión reducido (2D, 3D)
+#------Representar los ecosistemas en un espacio de dimensión reducido
 
 clusplot(Original_DataClustered,
          model1$cluster, 
          main = "2D Plot", 
          shade = T, 
+         labels = 4,
+         lines = 2)
+
+clusplot(Original_DataClustered,
+         model1$cluster, 
+         main = "2D Plot", #Title
+         shade = T, 
          labels = 2,
          lines = 0)
-
 
 # ---------------------------------------------------------------------------
 
