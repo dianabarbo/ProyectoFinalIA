@@ -20,29 +20,34 @@ Data <- read.table("DataSet1.csv",
                    sep=",",
                    header = TRUE,
                    encoding = "UTF-8",)
-Data <- select(Data, -Municipio.de.residencia)
+Data <- select(Data, 
+               -Municipio.de.residencia,
+               -Año.desmovilizacion,
+               -Tipo.de.Desmovilizacion,
+               -Ingreso.No.ingreso,
+               -Maximo.Nivel.FpT.Reportado,
+               -Linea.de.FpT.para.el.Max..Nivel)
+
 Data <- as.data.frame(Data)
-Data <- Data %>% slice(1:10000)
+Data$Año.de.Independizacion.Ingreso <- as.numeric(Data$Año.de.Independizacion.Ingreso)
+Data <- Data %>% filter(Año.de.Independizacion.Ingreso>2.015)
 Data <- na.omit(Data)
-Data <- dummify(Data,maxcat=860) #select=c("","")
+Data <- dummify(Data,maxcat=33)
 
 #ANÁLISIS EXPLORATORIO
 summary(Data)
 head(Data)
 
-#Data$Año.desmovilizacion <- as.factor(Data$Año.desmovilizacion)
-#Data$Año.de.Independizacion.Ingreso <- as.factor(Data$Año.de.Independizacion.Ingreso)
-
 #DETERMINANDO EL NÚMERO DE CLÚSTER
 #MÉTODO DEL CODO
 
-tot_withinss <- map_dbl(1:7, function(k){
+tot_withinss <- map_dbl(1:9, function(k){
   model <- kmeans(x = Data, centers = k)
   model$tot.withinss
 })
 
 elbow_df <- data.frame(
-  k = 1:7,
+  k = 1:9,
   tot_withinss = tot_withinss
 )
 
