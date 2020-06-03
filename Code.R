@@ -19,19 +19,26 @@ library(DataExplorer)
 Data <- read.table("DataSet1.csv",
                    sep=",",
                    header = TRUE,
-                   encoding = "UTF-8",)
+                   encoding = "UTF-8")
+
 Data <- select(Data, 
                -Municipio.de.residencia,
                -Año.desmovilizacion,
                -Tipo.de.Desmovilizacion,
                -Ingreso.No.ingreso,
                -Maximo.Nivel.FpT.Reportado,
-               -Linea.de.FpT.para.el.Max..Nivel)
+               -Linea.de.FpT.para.el.Max..Nivel,
+               -Clasificacion.Componente.Especifico)
 
 Data <- as.data.frame(Data)
 Data$Año.de.Independizacion.Ingreso <- as.numeric(Data$Año.de.Independizacion.Ingreso)
-Data <- Data %>% filter(Año.de.Independizacion.Ingreso>2.015)
+Data <- Data %>% 
+  filter(Año.de.Independizacion.Ingreso>2.015) %>% 
+  filter(N..de.Hijos>-1) %>% 
+  filter(Total.Integrantes.grupo.familiar>-1)
+
 Data <- na.omit(Data)
+Original_Data <- Data
 Data <- dummify(Data,maxcat=33)
 
 #ANÁLISIS EXPLORATORIO
@@ -41,19 +48,19 @@ head(Data)
 #DETERMINANDO EL NÚMERO DE CLÚSTER
 #MÉTODO DEL CODO
 
-tot_withinss <- map_dbl(1:9, function(k){
+tot_withinss <- map_dbl(1:15, function(k){
   model <- kmeans(x = Data, centers = k)
   model$tot.withinss
 })
 
 elbow_df <- data.frame(
-  k = 1:9,
+  k = 1:15,
   tot_withinss = tot_withinss
 )
 
 elbow_plot <- ggplot(elbow_df, aes(x = k, y = tot_withinss)) +
   geom_line() + geom_point() +
-  scale_x_continuous(breaks = 1:10) +
+  scale_x_continuous(breaks = 1:16) +
   ggtitle("Elbow plot")
 
 (elbow_plot)
@@ -62,70 +69,30 @@ elbow_plot <- ggplot(elbow_df, aes(x = k, y = tot_withinss)) +
 
 dist_variables <- dist(Data)
 
-#------ Caracterización de los "posibles grupos"
+model1 <- kmeans(x = Data, centers = 5)
 
-model1 <- kmeans(x = Data, centers = 4)
-model1$centers
-
-cluster1 <- model1$cluster
-cluster1
-
-Original_DataClustered <- Data %>% 
-  mutate (cluster = cluster1)
-Original_DataClustered
-
+#------ Caracterización de los grupos
 #------ Determinar el patrón de cada grupo (individuo "representante" del mismo)
 
-patterns <- model1$centers
-patterns
+Original_DataClustered <- Original_Data %>% mutate(cluster=model1$cluster)
 
-#------Representar los ecosistemas en un espacio de dimensión reducido
+c1 <- Original_DataClustered %>% filter(cluster==1)
+c2 <- Original_DataClustered %>% filter(cluster==2)
+c3 <- Original_DataClustered %>% filter(cluster==3)
+c4 <- Original_DataClustered %>% filter(cluster==4)
 
-clusplot(Original_DataClustered,
+summary(c1)
+summary(c2)
+summary(c3)
+summary(c4)
+
+#------Representar los desmovilizados en un espacio de dimensión reducido
+extra <- as.matrix(dist_variables)
+
+graph <- clusplot(extra,
          model1$cluster, 
          main = "2D Plot", 
          shade = T, 
          labels = 4,
          lines = 2)
-
-clusplot(Original_DataClustered,
-         model1$cluster, 
-         main = "2D Plot", #Title
-         shade = T, 
-         labels = 2,
-         lines = 0)
-
-# ---------------------------------------------------------------------------
-
-#EXTRAS
-
-#--- Silhouette Analysis
-
-sil_width <- map_dbl(2:10,  function(k){
-  model <- pam(Data, k = k)
-  model$silinfo$avg.width
-})
-
-sil_df <- data.frame(
-  k = 2:10,
-  sil_width = sil_width
-)
-
-ggplot(sil_df, aes(x = k, y = sil_width)) +
-  geom_line() + geom_point() +
-  scale_x_continuous(breaks = 2:10) +
-  ggtitle("Silhouette Analysis")
-
-#--- OPTIMAL K = 2 based on comparision between two methods analized before.
-
-MeanCLusters <- Original_DataClustered %>% 
-  group_by(cluster) %>% 
-  summarise(mean_colif_total = mean(Colif_total),
-            mean_colif_fecal=mean(Colif_fecal),
-            mean_Estrep_fecal=mean(Estrep_fecal),
-            mean_Cont_mineral=mean(Cont_mineral),
-            mean_conduct = mean(Conductivitat),
-            mean_Solids_susp = mean(Solids_susp),
-            mean_DQO =mean(DQO_M))
-
-as.data.frame(MeanCLusters)
+(graph)
