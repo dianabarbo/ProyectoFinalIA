@@ -3,10 +3,11 @@
 #2020-10
 
 #PAQUETES Y LIBRERÍAS
+install.packages("ggplot2")
 install.packages("dplyr")
 install.packages("purrr")
 install.packages("factoextra")
-install.packages("DataExplorer") #
+install.packages("DataExplorer")
 
 library(dplyr)
 library(ggplot2)
@@ -34,8 +35,8 @@ Data <- as.data.frame(Data)
 Data$Año.de.Independizacion.Ingreso <- as.numeric(Data$Año.de.Independizacion.Ingreso)
 Data <- Data %>% 
   filter(Año.de.Independizacion.Ingreso>2.015) %>% 
-  filter(N..de.Hijos>-1) %>% 
-  filter(Total.Integrantes.grupo.familiar>-1)
+  filter(N..de.Hijos>=0) %>% 
+  filter(Total.Integrantes.grupo.familiar>=0)
 
 Data <- na.omit(Data)
 Original_Data <- Data
@@ -48,19 +49,19 @@ head(Data)
 #DETERMINANDO EL NÚMERO DE CLÚSTER
 #MÉTODO DEL CODO
 
-tot_withinss <- map_dbl(1:15, function(k){
+tot_withinss <- map_dbl(1:10, function(k){
   model <- kmeans(x = Data, centers = k)
   model$tot.withinss
 })
 
 elbow_df <- data.frame(
-  k = 1:15,
+  k = 1:10,
   tot_withinss = tot_withinss
 )
 
 elbow_plot <- ggplot(elbow_df, aes(x = k, y = tot_withinss)) +
   geom_line() + geom_point() +
-  scale_x_continuous(breaks = 1:16) +
+  scale_x_continuous(breaks = 1:10) +
   ggtitle("Elbow plot")
 
 (elbow_plot)
@@ -69,10 +70,9 @@ elbow_plot <- ggplot(elbow_df, aes(x = k, y = tot_withinss)) +
 
 dist_variables <- dist(Data)
 
-model1 <- kmeans(x = Data, centers = 5)
+model1 <- kmeans(x = Data, centers = 4)
 
-#------ Caracterización de los grupos
-#------ Determinar el patrón de cada grupo (individuo "representante" del mismo)
+#Caracterización de los grupos
 
 Original_DataClustered <- Original_Data %>% mutate(cluster=model1$cluster)
 
@@ -86,7 +86,8 @@ summary(c2)
 summary(c3)
 summary(c4)
 
-#------Representar los desmovilizados en un espacio de dimensión reducido
+#Representar los desmovilizados en un espacio de dimensión reducido
+
 extra <- as.matrix(dist_variables)
 
 graph <- clusplot(extra,
@@ -96,3 +97,4 @@ graph <- clusplot(extra,
          labels = 4,
          lines = 2)
 (graph)
+
