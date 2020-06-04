@@ -22,14 +22,25 @@ Data <- read.table("DataSet1.csv",
                    header = TRUE,
                    encoding = "UTF-8")
 
-Data <- select(Data, 
-               -Municipio.de.residencia,
-               -Año.desmovilizacion,
-               -Tipo.de.Desmovilizacion,
-               -Ingreso.No.ingreso,
-               -Maximo.Nivel.FpT.Reportado,
-               -Linea.de.FpT.para.el.Max..Nivel,
-               -Clasificacion.Componente.Especifico)
+Data <- select(Data, Tipo.de.Desmovilizacion,
+               Sexo,
+               Año.de.Independizacion.Ingreso,
+               Ex.Grupo,
+               Grupo.Etario,
+               Situacion.Final.frente.al.proceso,
+               Departamento.de.residencia,
+               Nivel.Educativo,
+               OcupacionEconomica,
+               Posee.Censo.de.Familia.,
+               Posee.Servicio.Social.,
+               Posee.Conyuge.o.Compañero.a..,
+               N..de.Hijos,
+               Total.Integrantes.grupo.familiar,
+               Tipo.de.Vivienda,
+               Regimen.de.tenencia.Vivienda,
+               Posee.Serv..Publicos.Basicos,
+               Regimen.de.salud,
+               )
 
 Data <- as.data.frame(Data)
 Data$Año.de.Independizacion.Ingreso <- as.numeric(Data$Año.de.Independizacion.Ingreso)
@@ -68,7 +79,7 @@ elbow_plot <- ggplot(elbow_df, aes(x = k, y = tot_withinss)) +
 
 #CLÚSTER
 
-dist_variables <- dist(Data)
+dist_variables <- dist(Data, method = "euclidean")
 
 model1 <- kmeans(x = Data, centers = 4)
 
@@ -96,5 +107,6 @@ graph <- clusplot(extra,
          shade = T, 
          labels = 4,
          lines = 2)
+
 (graph)
 
